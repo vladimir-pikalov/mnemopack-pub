@@ -4,6 +4,9 @@ from bs4 import BeautifulSoup
 from langchain import hub
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import TextFormatter
+import re
 
 #Codespace: streamlit run Home.py --server.enableCORS false --server.enableXsrfProtection false
 
@@ -70,16 +73,44 @@ def load_second_brain(url: str) -> str:
     data = fetch_text_from_url(url);
     print(len(data))
     st.session_state.messages.append({"role": "user", "content": f"Second Brain size: {len(data)}"})
-    if(len(data) > 25000):
-        st.sidebar.warning("Second Brain data is too large to load! Max is 25000 characters.")
+    if(len(data) > 50000):
+        st.sidebar.warning("Second Brain data is too large to load! Max is 50000 characters.")
     else:
         st.session_state.second_brain_data = data
         st.session_state.second_brain_loaded = True
         st.sidebar.success("Second Brain data loaded successfully!")
 
+def is_youtube_url(url):
+    youtube_regex = (
+        r'(https?://)?(www\.)?'
+        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
+        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
+    youtube_pattern = re.compile(youtube_regex)
+    match = youtube_pattern.match(url)
+    return match
+
+def get_youtube_transcript(video_id):
+    try:
+        # Fetching the transcript
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        # Formatting the transcript into plain text
+        formatter = TextFormatter()
+        text_transcript = formatter.format_transcript(transcript)
+        print(text_transcript[:500])
+        return text_transcript
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None    
+
 def fetch_text_from_url(url):
-    # Check if the URL is likely a Google Docs link
-    if "docs.google.com/document" in url:
+
+    if is_youtube_url(url):
+        # Extract video ID from URL
+        video_id = is_youtube_url(url).group(6)
+        print(f"Fetching transcript for YouTube video ID: {video_id}")
+        return get_youtube_transcript(video_id)
+    elif "docs.google.com/document" in url:
+        # Check if the URL is likely a Google Docs link
         # Attempt to construct the export URL for plain text
         doc_id = url.split('/d/')[1].split('/')[0]
         export_url = f"https://docs.google.com/document/d/{doc_id}/export?format=txt"

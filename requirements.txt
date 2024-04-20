@@ -4,3 +4,4 @@ beautifulsoup4
 langchain
 langchain_openai
 langchainhub
+youtube-transcript-api
