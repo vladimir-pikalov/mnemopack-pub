@@ -5,7 +5,7 @@ from langchain import hub
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.formatters import TextFormatter
+from youtube_transcript_api.formatters import WebVTTFormatter
 import re
 
 #Codespace: streamlit run Home.py --server.enableCORS false --server.enableXsrfProtection false
@@ -94,7 +94,7 @@ def get_youtube_transcript(video_id):
         # Fetching the transcript
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         # Formatting the transcript into plain text
-        formatter = TextFormatter()
+        formatter = WebVTTFormatter()
         text_transcript = formatter.format_transcript(transcript)
         print(text_transcript[:500])
         return text_transcript
