@@ -1,5 +1,6 @@
-altair
-numpy
-pandas
-pydeck
 streamlit
+requests
+beautifulsoup4
+langchain
+langchain_openai
+langchainhub

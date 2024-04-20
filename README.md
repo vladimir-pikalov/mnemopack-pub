@@ -1,7 +1,7 @@
-# Welcome to streamlit
+# Talk to a second brain
 
-This is the app you get when you run `streamlit hello`, extracted as its own app.
+Chat allows you to talk to a second brain. 
 
-Edit [Hello.py](./Hello.py) to customize this app to your heart's desire. ❤️
-
-Check it out on [Streamlit Community Cloud](https://st-hello-app.streamlit.app/)
+How to use:
+- Specify URL to a second brain
+- Click Load
