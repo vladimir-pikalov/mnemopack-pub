@@ -5,7 +5,7 @@ from langchain import hub
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
 
-#streamlit run Main.py --server.enableCORS false --server.enableXsrfProtection false
+#Codespace: streamlit run Home.py --server.enableCORS false --server.enableXsrfProtection false
 
 def __main__():
     # Initialize session state to keep track of the Second Brain data load status
