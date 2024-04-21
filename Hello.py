@@ -1,3 +1,7 @@
+import sys
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -7,8 +11,19 @@ from langchain_core.output_parsers import StrOutputParser
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import WebVTTFormatter
 import re
+from langchain_chroma import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import OpenAIEmbeddings
+import sqlite3
 
-#Codespace: streamlit run Home.py --server.enableCORS false --server.enableXsrfProtection false
+
+#Codespace: 
+#  - chromadb workaround for sqlite3 - https://github.com/microsoft/autogen/issues/251
+#  - python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
+
+RAG_THRESHOLD = 50_000
+
+print(f"{sqlite3.sqlite_version_info}")
 
 def __main__():
     # Initialize session state to keep track of the Second Brain data load status
@@ -71,14 +86,10 @@ How to use:
 
 def load_second_brain(url: str) -> str:
     data = fetch_text_from_url(url);
-    print(len(data))
     st.session_state.messages.append({"role": "user", "content": f"Second Brain size: {len(data)}"})
-    if(len(data) > 50000):
-        st.sidebar.warning("Second Brain data is too large to load! Max is 50000 characters.")
-    else:
-        st.session_state.second_brain_data = data
-        st.session_state.second_brain_loaded = True
-        st.sidebar.success("Second Brain data loaded successfully!")
+    st.session_state.second_brain_data = data
+    st.session_state.second_brain_loaded = True
+    st.sidebar.success("Second Brain data loaded successfully!")
 
 def is_youtube_url(url):
     youtube_regex = (
@@ -139,12 +150,25 @@ def fetch_text_from_url(url):
             return text
         else:
             return "Failed to fetch or parse webpage content."
-        
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
 def talk_to_second_brain(question) -> str:
+
+    if len(st.session_state.second_brain_data) > RAG_THRESHOLD:
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_text(st.session_state.second_brain_data)
+        vectorstore = Chroma.from_texts(texts=splits, embedding=OpenAIEmbeddings())
+        retriever = vectorstore.as_retriever()
+        data = format_docs(retriever.invoke(question))
+    else:
+        data = st.session_state.second_brain_data
+
     prompt = hub.pull("adjreality/sb_generic")
     chain = prompt | ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3) | StrOutputParser()
     return chain.invoke({ 
-        "second_brain_data": st.session_state.second_brain_data, 
+        "second_brain_data": data, 
         "question": question
     })
 
