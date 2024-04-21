@@ -160,7 +160,10 @@ def talk_to_second_brain(question) -> str:
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         splits = text_splitter.split_text(st.session_state.second_brain_data)
         vectorstore = Chroma.from_texts(texts=splits, embedding=OpenAIEmbeddings())
-        retriever = vectorstore.as_retriever()
+        retriever = vectorstore.as_retriever(
+            search_type="similarity", 
+            search_kwargs={'k': 10}
+        )
         data = format_docs(retriever.invoke(question))
     else:
         data = st.session_state.second_brain_data
