@@ -62,61 +62,6 @@ else:
     access_key = None
 
 #############################################
-## MAIN AREA
-st.title('Manage Packs')
-st.text("Create, update, and delete MnemoPacks")
-
-types = ['public_url', 'text']
-index = types.index(pack['data_units'][0]['type']) if pack else 0
-
-pack_id = st.text_input("Pack ID:", value=pack['id'] if pack else "")
-access_key = st.text_input("Access Key:", value=access_key if access_key else "")
-
-c1, c2, c3, c4 = st.columns([1,1,1,1])
-btn_save = c1.button("Save Pack", disabled=False if (pack_id and access_key) or not pack_id else True)
-btn_load = c2.button('Load Pack', disabled=False if pack_id else True)
-btn_delete = c3.button('Delete Pack', disabled=False if pack_id and access_key else True)
-btn_reset = c4.button('Reset Form')
-
-if btn_load:
-    if pack_id:
-        pack = load_pack_by_id(pack_id)
-        if pack:
-            st.session_state["pack"] = pack
-            st.rerun()
-        else:
-            st.sidebar.error("Failed to load pack")
-    else:
-        st.sidebar.error("Pack ID is required to load the pack")
-
-type = st.selectbox('Pack Type:', options = types, index=index)
-data = st.text_area("Pack Data:", value=pack['data_units'][0]['data'] if pack else "", height=500)
-
-if btn_save:
-    res = save_pack(pack['id'] if pack else None, access_key, type, data)
-    if res:
-        st.session_state["access_key"] = res['access_key']
-        st.session_state["pack"] = load_pack_by_id(res['id'])
-        st.rerun()
-    else:
-        st.sidebar.error("Failed to save pack")
-
-if btn_reset:
-    del st.session_state["pack"]
-    del st.session_state["access_key"]
-    st.rerun()
-
-if btn_delete:
-    if not (pack and access_key):
-        st.error("Pack needs to be loaded and Access Key specified to delete the pack")
-    else:
-        delete_pack(pack['id'], access_key)
-        del st.session_state["pack"]
-        del st.session_state["access_key"]
-        st.rerun()
-
-
-#############################################
 ## SIDEBAR
 st.sidebar.header("Instructions")
 st.sidebar.markdown("""
@@ -139,3 +84,56 @@ Talk with the pack:
 [Privace Policy](https://docs.google.com/document/d/e/2PACX-1vTDIondyAvgPSy2bikCT2YEDw0S3FTfdECAbLAXouaYzvA5ig36MhlwW-sVyz6s2okoDr-vfAumjOap/pub)
 """)
 
+#############################################
+## MAIN AREA
+st.title('Manage Packs')
+st.text("Create, update, and delete MnemoPacks")
+
+types = ['public_url', 'text']
+index = types.index(pack['data_units'][0]['type']) if pack else 0
+
+pack_id = st.text_input("Pack ID:", value=pack['id'] if pack else "")
+access_key = st.text_input("Access Key:", value=access_key if access_key else "")
+
+c1, c2, c3, c4 = st.columns([1,1,1,3])
+btn_save = c1.button("Save Pack", disabled=False if (pack_id and access_key) or not pack_id else True)
+btn_load = c2.button('Load Pack', disabled=False if pack_id else True)
+btn_delete = c3.button('Delete Pack', disabled=False if pack_id and access_key else True)
+#btn_reset = c4.button('Reset Form')
+
+if btn_load:
+    if pack_id:
+        pack = load_pack_by_id(pack_id)
+        if pack:
+            st.session_state["pack"] = pack
+            st.rerun()
+        else:
+            st.error("Failed to load pack")
+    else:
+        st.error("Pack ID is required to load the pack")
+
+type = st.selectbox('Pack Type:', options = types, index=index)
+data = st.text_area("Pack Data:", value=pack['data_units'][0]['data'] if pack else "", height=500)
+
+if btn_save:
+    res = save_pack(pack['id'] if pack else None, access_key, type, data)
+    if res:
+        st.session_state["access_key"] = res['access_key']
+        st.session_state["pack"] = load_pack_by_id(res['id'])
+        st.rerun()
+    else:
+        st.error("Failed to save pack")
+
+if btn_delete:
+    if not (pack and access_key):
+        st.error("Pack needs to be loaded and Access Key specified to delete the pack")
+    else:
+        delete_pack(pack['id'], access_key)
+        del st.session_state["pack"]
+        del st.session_state["access_key"]
+        st.rerun()
+
+#if btn_reset:
+#    del st.session_state["pack"]
+#    del st.session_state["access_key"]
+#    st.rerun()
