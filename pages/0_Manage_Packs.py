@@ -131,6 +131,11 @@ MnemoPack is designed to save data in the cloud.
 Talk with the pack:
 1. Use [MnemoPack GPT](https://chatgpt.com/g/g-qjYUTvomW-mnemopack) to talk to the pack
 
+                    
+**Example**
+1. Specify `mp-fairytale` in the Pack ID and click the "Load Pack" button. You will see the details of the textual pack.
+2. Watch the [MnemoPack: Fairy Tale Pack](https://youtu.be/D4XCSNV6-_o?si=auRUfsKmtf3pFR0a) YouTube video to see what you'll get when you talk to the pack. 
+
 [Privace Policy](https://docs.google.com/document/d/e/2PACX-1vTDIondyAvgPSy2bikCT2YEDw0S3FTfdECAbLAXouaYzvA5ig36MhlwW-sVyz6s2okoDr-vfAumjOap/pub)
 """)
 
