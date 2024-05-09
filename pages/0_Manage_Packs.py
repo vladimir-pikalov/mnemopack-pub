@@ -133,7 +133,8 @@ if btn_delete:
     else:
         delete_pack(pack['id'], access_key)
         del st.session_state["pack"]
-        del st.session_state["access_key"]
+        if "access_key" in st.session_state:
+            del st.session_state["access_key"]
         st.rerun()
 
 #if btn_reset:
