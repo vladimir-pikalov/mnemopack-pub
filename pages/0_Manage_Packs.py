@@ -113,16 +113,19 @@ if btn_load:
         st.error("Pack ID is required to load the pack")
 
 type = st.selectbox('Pack Type:', options = types, index=index)
-data = st.text_area("Pack Data:", value=pack['data_units'][0]['data'] if pack else "", height=500)
+data = st.text_area("Pack Data:", value=pack['data_units'][0]['data'] if pack else "", height=300)
 
 if btn_save:
-    res = save_pack(pack['id'] if pack else None, access_key, type, data)
-    if res:
-        st.session_state["access_key"] = res['access_key']
-        st.session_state["pack"] = load_pack_by_id(res['id'])
-        st.rerun()
+    if not data:
+        st.error("Pack Data is required")
     else:
-        st.error("Failed to save pack")
+        res = save_pack(pack['id'] if pack else None, access_key, type, data)
+        if res:
+            st.session_state["access_key"] = res['access_key']
+            st.session_state["pack"] = load_pack_by_id(res['id'])
+            st.rerun()
+        else:
+            st.error("Failed to save pack")
 
 if btn_delete:
     if not (pack and access_key):
