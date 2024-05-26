@@ -1,57 +1,32 @@
-import sys
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup
-from langchain import hub
-from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import StrOutputParser
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.formatters import WebVTTFormatter
-import re
-from langchain_chroma import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
-import sqlite3
+import json
 
 
-#Codespace: 
-#  - chromadb workaround for sqlite3 - https://github.com/microsoft/autogen/issues/251
-#  - python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
-
-RAG_THRESHOLD = 50_000
-
-print(f"{sqlite3.sqlite_version_info}")
+MNEMOPACK_TALK_API_URL = "https://talk.mnemopack.com"
 
 def __main__():
-    # Initialize session state to keep track of the Second Brain data load status
-    if 'second_brain_loaded' not in st.session_state:
-        st.session_state.second_brain_loaded = False
-
     # Sidebar for Second Brain URL input
-    st.sidebar.header("Talk to a Second Brain")
+    st.sidebar.header("Instructions")
     st.sidebar.markdown("""
 How to use:
-- Specify URL to a second brain
-- Click Load
-- Talk to the second brain...
-
-**NOTE**: Chat history, and other data is cleared  when the page is refreshed.""")
+- Specify MnemoPack ID
+- Communicate with it in the chat
+                        
+**NOTE**: Use <a href="/Manage_Packs/" target="_self">Manage Packs</a> to create a pack.
+""", unsafe_allow_html=True)
     
-    second_brain_url = st.sidebar.text_input("Second Brain URL:", placeholder="Enter URL in click Load button")
-    if st.sidebar.button("Load"):
-        load_second_brain(second_brain_url)
+    pack_id = st.sidebar.text_input("MnemoPack ID", key="pack_id")
+
     if st.sidebar.button("Clear Chat History"):
         st.session_state.messages = []
 
     st.sidebar.markdown("""
-**DATA PRIVACY**: The data is sent to OpenAI company for processing. Please do not include any sensitive data in the second brain and/or in the questions. By using this app, you agree to the [OpenAI Privacy Policy](https://beta.openai.com/docs/api-reference/privacy-policy).
+[Privace Policy](https://docs.google.com/document/d/e/2PACX-1vTDIondyAvgPSy2bikCT2YEDw0S3FTfdECAbLAXouaYzvA5ig36MhlwW-sVyz6s2okoDr-vfAumjOap/pub)
 """)
 
     # Main page chat control
-    st.title("Talk to a Second Brain")
+    st.title("Talk to MnemoPack")
 
     # Initialize chat history
     if "messages" not in st.session_state:
@@ -63,7 +38,7 @@ How to use:
             st.markdown(message["content"])
 
     # React to user input
-    if prompt := st.chat_input("Talk to the second brain..."):
+    if prompt := st.chat_input(placeholder = "Talk to MnemoPack ..." if pack_id else "Specify tha pack ID in the left side bar to start.", disabled=False if pack_id else True):
 
         # Display user message in chat message container
         st.chat_message("user").markdown(prompt)
@@ -71,108 +46,52 @@ How to use:
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        if st.session_state.second_brain_loaded:
-            with st.spinner("Thinking..."):
-                response = talk_to_second_brain(prompt)
-        else:
-            response = "Please upload data to a second brain."
+        with st.spinner("Communicating with the pack..."):
+            if pack_id:
+                response = talk_to_pack(pack_id, prompt)
+                if response:
+                    # Display assistant response in chat message container
+                    with st.chat_message("assistant"):
+                        st.markdown(response)
 
-        # Display assistant response in chat message container
-        with st.chat_message("assistant"):
-            st.markdown(response)
+                    # Add assistant response to chat history
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+            else:
+                st.error("Please specify the pack Id")
 
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
 
-def load_second_brain(url: str) -> str:
-    data = fetch_text_from_url(url);
-    st.session_state.messages.append({"role": "user", "content": f"Second Brain size: {len(data)}"})
-    st.session_state.second_brain_data = data
-    st.session_state.second_brain_loaded = True
-    st.sidebar.success("Second Brain data loaded successfully!")
+def talk_to_pack(pack_id, question) -> str:
 
-def is_youtube_url(url):
-    youtube_regex = (
-        r'(https?://)?(www\.)?'
-        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
-        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})')
-    youtube_pattern = re.compile(youtube_regex)
-    match = youtube_pattern.match(url)
-    return match
+    # URL of the API
+    url = f"{MNEMOPACK_TALK_API_URL}/talk/pack/invoke"
 
-def get_youtube_transcript(video_id):
-    try:
-        # Fetching the transcript
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        # Formatting the transcript into plain text
-        formatter = WebVTTFormatter()
-        text_transcript = formatter.format_transcript(transcript)
-        print(text_transcript[:500])
-        return text_transcript
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None    
+    # Sample input and config data
+    input_data = {
+        "input": {
+            "pack_id": pack_id,
+            "question": question
+        },
+        "config": {},  # Include necessary configuration details if any
+        "kwargs": {}   # Include any additional keyword arguments if required
+    }
 
-def fetch_text_from_url(url):
+    # Headers to indicate JSON content
+    headers = {
+        'Content-Type': 'application/json'
+    }
 
-    if is_youtube_url(url):
-        # Extract video ID from URL
-        video_id = is_youtube_url(url).group(6)
-        print(f"Fetching transcript for YouTube video ID: {video_id}")
-        return get_youtube_transcript(video_id)
-    elif "docs.google.com/document" in url:
-        # Check if the URL is likely a Google Docs link
-        # Attempt to construct the export URL for plain text
-        doc_id = url.split('/d/')[1].split('/')[0]
-        export_url = f"https://docs.google.com/document/d/{doc_id}/export?format=txt"
-        
-        # Get the response from the export URL
-        response = requests.get(export_url)
-        if response.status_code == 200:
-            return response.text
-        else:
-            return "Failed to fetch or parse Google Docs content."
+    # Making a POST request
+    response = requests.post(url, headers=headers, data=json.dumps(input_data))
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        return response.json()["output"]
     else:
-        # Assume it's a regular webpage and proceed to scrape
-        response = requests.get(url)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Remove script and style elements
-            for script_or_style in soup(["script", "style"]):
-                script_or_style.decompose()
-            
-            # Get text and clean up whitespace
-            text = soup.get_text()
-            lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            text = '\n'.join(chunk for chunk in chunks if chunk)
-            return text
-        else:
-            return "Failed to fetch or parse webpage content."
+        print("Failed to make request.")
+        print("Status Code:", response.status_code)
+        print("Response:", response)
 
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
+    return None
 
-def talk_to_second_brain(question) -> str:
-
-    if len(st.session_state.second_brain_data) > RAG_THRESHOLD:
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        splits = text_splitter.split_text(st.session_state.second_brain_data)
-        vectorstore = Chroma.from_texts(texts=splits, embedding=OpenAIEmbeddings())
-        retriever = vectorstore.as_retriever(
-            search_type="similarity", 
-            search_kwargs={'k': 10}
-        )
-        data = format_docs(retriever.invoke(question))
-    else:
-        data = st.session_state.second_brain_data
-
-    prompt = hub.pull("adjreality/sb_generic")
-    chain = prompt | ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3) | StrOutputParser()
-    return chain.invoke({ 
-        "second_brain_data": data, 
-        "question": question
-    })
 
 __main__()
