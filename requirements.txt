@@ -8,4 +8,4 @@ youtube-transcript-api
 langchain_chroma
 langchain_text_splitters
 langchain_community
-#pysqlite3-binary
+uuid

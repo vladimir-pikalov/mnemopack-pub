@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import uuid
 
 
 MNEMOPACK_TALK_API_URL = "https://talk.mnemopack.com"
@@ -65,13 +66,18 @@ def talk_to_pack(pack_id, question) -> str:
     # URL of the API
     url = f"{MNEMOPACK_TALK_API_URL}/talk/pack/invoke"
 
+    if "pack_session_id" not in st.session_state:
+        st.session_state.pack_session_id = str(uuid.uuid4())
+
     # Sample input and config data
     input_data = {
         "input": {
             "pack_id": pack_id,
             "question": question
         },
-        "config": {},  # Include necessary configuration details if any
+        "config": {
+            "configurable": { "session_id": st.session_state.pack_session_id }
+        },  # Include necessary configuration details if any
         "kwargs": {}   # Include any additional keyword arguments if required
     }
 
